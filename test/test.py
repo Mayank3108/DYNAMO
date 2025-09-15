@@ -1,4 +1,4 @@
-# File: test/test_model5_6dlav_paper_matrix_kabsch.py
+# File: test/test.py
 
 import os
 import numpy as np
@@ -37,7 +37,6 @@ def evaluate():
 
     NUM_FRAMES = cfg.NUM_FRAMES
 
-    # ---- Aggregators (unchanged) ----
     assemblies = []
 
     range_buckets = [(0, 5, "1-5"), (0, 15, "1-15"),
@@ -62,7 +61,6 @@ def evaluate():
 
     for idx, batch in enumerate(loader):
         filename = dataset.file_names[idx]
-        # filename = batch.get("filename", [f"sample_{idx}"])[0]
         mask = batch["mask"][0]
         num_parts = int(torch.sum(mask).item())
 
@@ -89,17 +87,14 @@ def evaluate():
             if N < 3:
                 continue
 
-            # homogeneous coords for fast transforms
             homo = np.hstack([pc0, np.ones((N, 1), dtype=np.float64)])     # (N,4)
 
             for t in range(1, NUM_FRAMES + 1):
-                # GT clouds at t-1 and t
                 T_gt_prev = se3_gt[pid, t - 1].cpu().numpy()
                 T_gt_curr = se3_gt[pid, t].cpu().numpy()
                 gt_prev = (T_gt_prev @ homo.T).T[:, :3]                     # (N,3)
                 gt_curr = (T_gt_curr @ homo.T).T[:, :3]                     # (N,3)
 
-                # Pred clouds at t-1 and t
                 T_pr_prev = se3_pred[pid, t - 1].cpu().numpy()
                 T_pr_curr = se3_pred[pid, t].cpu().numpy()
                 pr_prev = (T_pr_prev @ homo.T).T[:, :3]
@@ -173,9 +168,7 @@ def evaluate():
             temporal_trans_sum[num_parts][valid_mask] += frame_trans_avg[valid_mask]
             temporal_counts[num_parts][valid_mask]    += 1
 
-    # ----------------------------
-    # Printing (unchanged)
-    # ----------------------------
+
     print("\n=== PER-ASSEMBLY MEAN ERRORS (Rotation°, Translation units) ===")
     if len(assemblies) == 0:
         print("No assemblies.")
