@@ -5,14 +5,7 @@ from typing import Sequence, Tuple
 from models.pointnet_utils import PointNetSetAbstraction
 
 class PointNet2Backbone(nn.Module):
-    """
-    Drop-in PointNet++ backbone that matches your current PointTransformerBackbone I/O:
-      in:  (B*P, 3, N)
-      out: (B*P, embed_dim)
-
-    Internally uses three SA (set abstraction) layers + an optional global SA (group_all=True)
-    to collapse to a single feature vector per part.
-    """
+    
     def __init__(
         self,
         input_dim: int = 3,
@@ -20,23 +13,21 @@ class PointNet2Backbone(nn.Module):
         sa_npoints: Sequence[int] = (1024, 512, 128),
         sa_radii:   Sequence[float] = (0.05, 0.10, 0.20),
         sa_nsamples: Sequence[int] = (32, 32, 64),
-        # MLP channels per SA block (last channel of sa3 will be forced to embed_dim)
         sa_mlps: Tuple[Sequence[int], Sequence[int], Sequence[int]] = (
             (64, 64, 128),
             (128, 128, 256),
-            (256, 256, 256),  # last value will be replaced by embed_dim
+            (256, 256, 256),  
         ),
         use_global_sa: bool = True,
     ):
         super().__init__()
 
         assert len(sa_npoints) == len(sa_radii) == len(sa_nsamples) == 3, "Expect 3 SA stages"
-        assert len(sa_mlps) == 3, "Expect 3 SA MLP definitions"
+        assert len(sa_mlps) == 3,
 
         # ---- SA1 ----
-        # SSG impl expects in_channel == (prev_feat + 3). For the first SA, prev_feat = 0.
-        in_ch_sa1 = input_dim  # = 3 (xyz only)
-        mlp_sa1 = tuple(sa_mlps[0])  # e.g., (64, 64, 128)
+        in_ch_sa1 = input_dim  
+        mlp_sa1 = tuple(sa_mlps[0]) 
         self.sa1 = PointNetSetAbstraction(
             npoint=sa_npoints[0],
             radius=sa_radii[0],
@@ -45,11 +36,11 @@ class PointNet2Backbone(nn.Module):
             mlp=mlp_sa1,
             group_all=False
         )
-        c1 = mlp_sa1[-1]  # 128
+        c1 = mlp_sa1[-1]  
 
-        # ---- SA2 ----
-        in_ch_sa2 = c1 + 3  # previous feature + xyz
-        mlp_sa2 = tuple(sa_mlps[1])  # e.g., (128, 128, 256)
+
+        in_ch_sa2 = c1 + 3  
+        mlp_sa2 = tuple(sa_mlps[1])
         self.sa2 = PointNetSetAbstraction(
             npoint=sa_npoints[1],
             radius=sa_radii[1],
@@ -58,13 +49,13 @@ class PointNet2Backbone(nn.Module):
             mlp=mlp_sa2,
             group_all=False
         )
-        c2 = mlp_sa2[-1]  # 256
+        c2 = mlp_sa2[-1]  
 
-        # ---- SA3 ----
+
         in_ch_sa3 = c2 + 3
         mlp_sa3 = list(sa_mlps[2])
-        mlp_sa3[-1] = embed_dim  # force final stage to produce embed_dim
-        mlp_sa3 = tuple(mlp_sa3)  # e.g., (256, 256, embed_dim)
+        mlp_sa3[-1] = embed_dim  
+        mlp_sa3 = tuple(mlp_sa3) 
         self.sa3 = PointNetSetAbstraction(
             npoint=sa_npoints[2],
             radius=sa_radii[2],
@@ -73,11 +64,10 @@ class PointNet2Backbone(nn.Module):
             mlp=mlp_sa3,
             group_all=False
         )
-        c3 = mlp_sa3[-1]  # = embed_dim
+        c3 = mlp_sa3[-1]
 
         self.use_global_sa = use_global_sa
         if self.use_global_sa:
-            # ---- Global SA (group_all=True) to hard-collapse to a single vector ----
             in_ch_sa4 = c3 + 3
             self.sa4 = PointNetSetAbstraction(
                 npoint=None, radius=None, nsample=None,
@@ -86,7 +76,6 @@ class PointNet2Backbone(nn.Module):
                 group_all=True
             )
         else:
-            # Fallback: global max pool over last SA’s points
             self.global_pool = nn.AdaptiveMaxPool1d(1)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
