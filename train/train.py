@@ -36,7 +36,6 @@ def setup():
         optimizer, mode='min', factor=0.5, patience=10, min_lr=1e-6
     )
 
-    # Allow a v4-specific path if you define it; else fall back.
     ckpt_path = getattr(cfg, "CHECKPOINT_PATH", "./checkpoints/DYNAMO_checkpoint.pt")
 
     return model, train_loader, optimizer, scheduler, device, ckpt_path
@@ -49,7 +48,6 @@ def train():
 
     best_loss = float("inf")
 
-    # Same toggles as your v2 trainer
     loss_config = {
         'use_l2': True,
         'use_lav_const': True,
@@ -65,12 +63,10 @@ def train():
         logs = {}
 
         for batch in tqdm(train_loader, desc=f"Epoch {epoch:03d}", leave=False):
-            # Move tensors to device
             for k in batch:
                 if isinstance(batch[k], torch.Tensor):
                     batch[k] = batch[k].to(device, non_blocking=True)
 
-            # Shapes: pc (B, P, N, 3) → (B, P, 3, N); lav_gt (B, T, P, 6) → (B, P, T, 6)
             pc = batch["point_cloud"].permute(0, 1, 3, 2)   # (B, P, 3, N)
             lav_gt = batch["lav"].permute(0, 2, 1, 3)       # (B, P, T, 6)
             mask = batch["mask"]
@@ -83,7 +79,7 @@ def train():
             total_loss, loss_dict = compute_losses(
                 lav_pred=lav_pred,
                 lav_gt=lav_gt,
-                pc=pc,               # used if chamfer/l2_pc enabled
+                pc=pc,               
                 mask=mask,
                 loss_config=loss_config
             )
