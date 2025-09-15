@@ -1,6 +1,6 @@
 #models/gnn_encoder.py
 import torch.nn as nn
-from models.gnn_layer import CouplingAwareGNNLayer  # wherever you saved it
+from models.gnn_layer import CouplingAwareGNNLayer 
 
 class GNNEncoder(nn.Module):
     def __init__(self, embed_dim=256, num_layers=4):
